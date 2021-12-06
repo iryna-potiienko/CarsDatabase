@@ -17,346 +17,318 @@ using Location = Android.Locations.Location;
 
 namespace CarsDatabase
 {
-    [Activity(Label = "MapsActivity")]
-    public class MapsActivity: Activity, IOnMapReadyCallback, ILocationListener
-    {
-        private GoogleMap eMap; //Map
-        private Button recentre; //Button
-        private Button route; //Button
-        private EditText destinationPoint;
-        private LatLng latlng; //Latitude and longitude of our position
-        private LatLng latlng2; //CDN's center
-        private LatLng _latlngService; //variable that contain the latitude and longitude of the service
-        private Marker marker1; //marker of our position
-        private Marker destinationMarker;
-        double latitudine; //latitude for the method UpdateLocation()
-        double longitudine; //longitude for the method UpdateLocation()
-        LocationManager locationManager; //Location Manager
-        string locationProvider = string.Empty; //Location Provider
+	[Activity(Label = "MapsActivity")]
+	public class MapsActivity : Activity, IOnMapReadyCallback, ILocationListener
+	{
+		private GoogleMap _eMap; //Map
+		private Button _recenterButton;
+		private Button _routeButton;
+		private EditText _destinationPointEditText;
+		private LatLng _myCurrentLatLng; //Latitude and longitude of our position
 
-        protected override void OnCreate(Bundle savedInstanceState)
-        {
-            base.OnCreate(savedInstanceState);
-            Xamarin.Essentials.Platform.Init(this, savedInstanceState);
+		private LatLng _mapCenterLatLng; //CDN's center
 
-            // Create your application here
-            SetContentView(Resource.Layout.maps_view);
+		//private LatLng _latlngService; //variable that contain the latitude and longitude of the service
+		private Marker _myCurrentPositionMarker; //marker of our position
+		private Marker _destinationMarker;
+		private LocationManager _locationManager;
+		string _locationProvider = string.Empty;
 
-            //Set up the map
-            SetUpMap();
+		private string ApiKey = "AIzaSyC6cFXGWrJjL_Q2M5-IRNx4tHDDzlvMbjc";
 
-            //Inizialize the location 
-            InitializeLocationManager();
-
-            //recenter button
-            recentre = FindViewById<Button>(Resource.Id.recenter);
-            route = FindViewById<Button>(Resource.Id.route);
-            destinationPoint = FindViewById<EditText>(Resource.Id.DestinationPointName);
-
-            recentre.Click += recentre_Click;
-            route.Click += route_Click;
-        }
-
-
-        public override void OnBackPressed()
-        {
-            eMap.Clear();
-            this.Finish();
-        }
-
-        void InitializeLocationManager()
-        {
-            // initialise the location manager 
-            locationManager = (LocationManager) GetSystemService(LocationService);
-            // define its Criteria
-            Criteria criteriaForLocationService = new Criteria
-            {
-                Accuracy = Accuracy.Coarse,
-                PowerRequirement = Power.Medium
-            };
-            // find a location provider (GPS, wi-fi, etc.)
-            IList<string> acceptableLocationProviders = locationManager.GetProviders(criteriaForLocationService, true);
-            // if we have any, use the first one
-            if (acceptableLocationProviders.Any())
-                locationProvider = acceptableLocationProviders.First();
-            else
-                locationProvider = string.Empty;
-        }
-
-        public void OnLocationChanged(Location location)
-        {
-            //if location has changed
-            if (location != null)
-            {
-                latitudine = location.Latitude;
-                longitudine = location.Longitude;
-                if (latitudine > 0 && longitudine > 0)
-                {
-                    //if the map already exists
-                    if (eMap != null)
-                    {
-                        latlng = new LatLng(latitudine, longitudine);
-                        //If already exists a marker, delete it
-                        if (marker1 != null)
-                        {
-                            marker1.Remove();
-                            marker1 = null;
-                        }
-
-                        marker1 = eMap.AddMarker(new MarkerOptions().SetPosition(latlng).SetTitle("My location")
-                            .SetIcon(BitmapDescriptorFactory.DefaultMarker(BitmapDescriptorFactory.HueCyan)));
-                        //eMap.MoveCamera(CameraUpdateFactory.NewLatLngZoom(latlng2, 15.7F));
-                    }
-                    //Toast.MakeText(ApplicationContext, string.Format("UPDATE LOCATION lat => {0} long => {1}", location.Latitude, location.Longitude), ToastLength.Long).Show();
-                }
-            }
-        } // end onLocationChanged
-
-        protected override void OnResume()
-        {
-            base.OnResume();
-            if (locationProvider != string.Empty)
-                locationManager.RequestLocationUpdates(locationProvider, 0, 0, this);
-        } // end OnResume
-
-        protected override void OnPause()
-        {
-            base.OnPause();
-            locationManager.RemoveUpdates(this);
-        } // end OnPause
-
-        private void SetUpMap()
-        {
-            if (eMap == null)
-            {
-	            FragmentManager.FindFragmentById<MapFragment>(Resource.Id.map).GetMapAsync(this);
-            }
-        }
-
-        public void OnMapReady(GoogleMap googleMap)
-        {
-            eMap = googleMap;
-            
-            //CDN's center
-            latlng2 = new LatLng(50.484001, 30.636866);
-
-            //var marker = eMap.AddMarker(new MarkerOptions().SetPosition(latlng2).SetTitle("Center")
-             //   .SetIcon(BitmapDescriptorFactory.DefaultMarker(BitmapDescriptorFactory.HueViolet)));
-            
-            //Set the firt view of the CDN
-            CameraPosition INIT = new CameraPosition.Builder()
-                .Target(latlng2)
-                .Zoom(13.2F)
-                .Bearing(82F)
-                .Build();
-
-            eMap.AnimateCamera(CameraUpdateFactory.NewCameraPosition(INIT));
-        }
-
-        public void OnStatusChanged(string provider, Availability status, Bundle extras)
-        {
-        }
-
-        public void OnProviderDisabled(string provider)
-        {
-        }
-
-        public void OnProviderEnabled(string provider)
-        {
-        }
-
-        async void BuildPath(string address)
-        {
-            try
-            {
-	            eMap.Clear();
-	            marker1 = eMap.AddMarker(new MarkerOptions().SetPosition(latlng).SetTitle("My location")
-		            .SetIcon(BitmapDescriptorFactory.DefaultMarker(BitmapDescriptorFactory.HueCyan)));
-	            
-                var locations = await Geocoding.GetLocationsAsync(address);
-
-                var location = locations?.FirstOrDefault();
-                
-                    //Toast.MakeText(ApplicationContext,
-                   //     string.Format("Latitude: {0}, Longitude: {1}", location.Latitude, location.Longitude),ToastLength.Long).Show();
-
-               var pointCoordinates = new LatLng(location.Latitude, location.Longitude);
-               destinationMarker = eMap.AddMarker(new MarkerOptions().SetPosition(pointCoordinates).SetTitle("Destination point")
-                   .SetIcon(BitmapDescriptorFactory.DefaultMarker(BitmapDescriptorFactory.HueRed)));
-               
-               string strGoogleDirectionUrlConstraction="https://maps.googleapis.com/maps/api/directions/json?origin={0},{1}&destination={2},{3}&key=AIzaSyCBOeufwGrgYNWxv84GZY5UM59jkX1xtYQ";
-               var strGoogleDirectionUrl = string.Format(strGoogleDirectionUrlConstraction, latlng.Latitude, latlng.Longitude, 
-	               location.Latitude, location.Longitude);
-               string strJSONDirectionResponse = await FnHttpRequest(strGoogleDirectionUrl);
-               
-               FnUpdateCameraPosition(pointCoordinates);
-               FnSetDirectionQuery ( strJSONDirectionResponse );
-            }
-            catch (Exception ex)
-            {
-                // Handle exception that may have occurred in geocoding
-                Toast.MakeText(ApplicationContext,
-                    ex.Message,
-                    ToastLength.Long).Show();
-                //return null;
-            }
-        }
-
-        void recentre_Click(object sender, EventArgs e)
-        {
-            CameraUpdate camera = CameraUpdateFactory.NewLatLngZoom(latlng2, 13.2F);
-            eMap.MoveCamera(camera);
-        }
-
-        void route_Click(object sender, EventArgs e)
-        {
-            string destinationPointName = destinationPoint.Text;
-            BuildPath(destinationPointName);
-        }
-        
-        public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Android.Content.PM.Permission[] grantResults)
-        {
-            Xamarin.Essentials.Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-
-            base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-        }
-        
-		void FnSetDirectionQuery(string strJSONDirectionResponse)
+		protected override void OnCreate(Bundle savedInstanceState)
 		{
-			var objRoutes = JsonConvert.DeserializeObject<GoogleDirectionClass> ( strJSONDirectionResponse );  
-			//objRoutes.routes.Count  --may be more then one 
-			if ( objRoutes.routes.Count > 0 )
+			base.OnCreate(savedInstanceState);
+			Xamarin.Essentials.Platform.Init(this, savedInstanceState);
+
+			// Create your application here
+			SetContentView(Resource.Layout.maps_view);
+
+			//Set up the map
+			SetUpMap();
+
+			//Inizialize the location 
+			InitializeLocationManager();
+
+			//recenter button
+			_recenterButton = FindViewById<Button>(Resource.Id.recenter);
+			_routeButton = FindViewById<Button>(Resource.Id.route);
+			_destinationPointEditText = FindViewById<EditText>(Resource.Id.DestinationPointName);
+
+			_recenterButton.Click += RecenterButtonClick;
+			_routeButton.Click += RouteButtonClick;
+		}
+
+
+		public override void OnBackPressed()
+		{
+			_eMap.Clear();
+			this.Finish();
+		}
+
+		void InitializeLocationManager()
+		{
+			// initialise the location manager 
+			_locationManager = (LocationManager) GetSystemService(LocationService);
+			// define its Criteria
+			Criteria criteriaForLocationService = new Criteria
 			{
-				string encodedPoints =	objRoutes.routes [0].overview_polyline.points; 
+				Accuracy = Accuracy.Coarse,
+				PowerRequirement = Power.Medium
+			};
+			// find a location provider (GPS, wi-fi, etc.)
+			IList<string> acceptableLocationProviders = _locationManager.GetProviders(criteriaForLocationService, true);
+			// if we have any, use the first one
+			if (acceptableLocationProviders.Any())
+				_locationProvider = acceptableLocationProviders.First();
+			else
+				_locationProvider = string.Empty;
+		}
 
-				var lstDecodedPoints =	FnDecodePolylinePoints ( encodedPoints ); 
-				//convert list of location point to array of latlng type
-				var latLngPoints = new LatLng[lstDecodedPoints.Count]; 
-				int index = 0;
-				foreach ( var loc in lstDecodedPoints )
-				{
-					latLngPoints[index++] = loc; //new LatLng ( loc.Latitude , loc.Longitude );
-				}
+		public void OnLocationChanged(Location location)
+		{
+			//if location has changed
+			if (location == null) return;
+			
+			var latitudine = location.Latitude;
+			var longitudine = location.Longitude;
+			if (!(latitudine > 0) || !(longitudine > 0)) return;
+			//if the map already exists
+			if (_eMap == null) return;
+			_myCurrentLatLng = new LatLng(latitudine, longitudine);
+			//If already exists a marker, delete it
+			if (_myCurrentPositionMarker != null)
+			{
+				_myCurrentPositionMarker.Remove();
+				_myCurrentPositionMarker = null;
+			}
 
-				var polylineoption = new PolylineOptions (); 
-				polylineoption.InvokeColor ( Android.Graphics.Color.Green );
-				polylineoption.Geodesic ( true );
-				polylineoption.Add ( latLngPoints ); 
-				RunOnUiThread ( () =>
-				eMap.AddPolyline ( polylineoption ) ); 
+			_myCurrentPositionMarker = _eMap.AddMarker(new MarkerOptions().SetPosition(_myCurrentLatLng)
+				.SetTitle("My location")
+				.SetIcon(BitmapDescriptorFactory.DefaultMarker(BitmapDescriptorFactory.HueCyan)));
+		}
+
+		protected override void OnResume()
+		{
+			base.OnResume();
+			if (_locationProvider != string.Empty)
+				_locationManager.RequestLocationUpdates(_locationProvider, 0, 0, this);
+		}
+
+		protected override void OnPause()
+		{
+			base.OnPause();
+			_locationManager.RemoveUpdates(this);
+		}
+
+		private void SetUpMap()
+		{
+			if (_eMap == null)
+			{
+				FragmentManager.FindFragmentById<MapFragment>(Resource.Id.map).GetMapAsync(this);
 			}
 		}
 
-		List<LatLng> FnDecodePolylinePoints(string encodedPoints) 
+		public void OnMapReady(GoogleMap googleMap)
 		{
-			if ( string.IsNullOrEmpty ( encodedPoints ) )
-				return null;
-			var poly = new List<LatLng>();
-			char[] polylinechars = encodedPoints.ToCharArray();
-			int index = 0;
+			_eMap = googleMap;
 
-			int currentLat = 0;
-			int currentLng = 0;
-			int next5bits;
-			int sum;
-			int shifter;
+			//CDN's center
+			_mapCenterLatLng = new LatLng(50.484001, 30.636866);
 
+			//Set the firt view of the CDN
+			CameraPosition INIT = new CameraPosition.Builder()
+				.Target(_mapCenterLatLng)
+				.Zoom(13.2F)
+				.Bearing(82F)
+				.Build();
+
+			_eMap.AnimateCamera(CameraUpdateFactory.NewCameraPosition(INIT));
+		}
+
+		public void OnStatusChanged(string provider, Availability status, Bundle extras)
+		{
+		}
+
+		public void OnProviderDisabled(string provider)
+		{
+		}
+
+		public void OnProviderEnabled(string provider)
+		{
+		}
+
+		private async void BuildPath(string destinationAddress)
+		{
 			try
 			{
-				while (index < polylinechars.Length)
-				{
-					// calculate next latitude
-					sum = 0;
-					shifter = 0;
-					do
-					{
-						next5bits = (int)polylinechars[index++] - 63;
-						sum |= (next5bits & 31) << shifter;
-						shifter += 5;
-					} while (next5bits >= 32 && index < polylinechars.Length);
+				_eMap.Clear();
+				_myCurrentPositionMarker = _eMap.AddMarker(new MarkerOptions().SetPosition(_myCurrentLatLng)
+					.SetTitle("My location")
+					.SetIcon(BitmapDescriptorFactory.DefaultMarker(BitmapDescriptorFactory.HueCyan)));
 
-					if (index >= polylinechars.Length)
-						break;
+				var destinationLocations = await Geocoding.GetLocationsAsync(destinationAddress);
+				var destinationLocation = destinationLocations?.FirstOrDefault();
 
-					currentLat += (sum & 1) == 1 ? ~(sum >> 1) : (sum >> 1);
+				var pointCoordinates = new LatLng(destinationLocation.Latitude, destinationLocation.Longitude);
+				_destinationMarker = _eMap.AddMarker(new MarkerOptions().SetPosition(pointCoordinates)
+					.SetTitle("Destination point")
+					.SetIcon(BitmapDescriptorFactory.DefaultMarker(BitmapDescriptorFactory.HueRed)));
 
-					//calculate next longitude
-					sum = 0;
-					shifter = 0;
-					do
-					{
-						next5bits = (int)polylinechars[index++] - 63;
-						sum |= (next5bits & 31) << shifter;
-						shifter += 5;
-					} while (next5bits >= 32 && index < polylinechars.Length);
+				var strGoogleDirectionUrlConstraction =
+					"https://maps.googleapis.com/maps/api/directions/json?origin={0},{1}&destination={2},{3}&key={4}";
+				var strGoogleDirectionUrl = string.Format(strGoogleDirectionUrlConstraction,
+					_myCurrentLatLng.Latitude, _myCurrentLatLng.Longitude,
+					destinationLocation.Latitude, destinationLocation.Longitude, ApiKey);
 
-					if (index >= polylinechars.Length && next5bits >= 32)
-						break;
+				var strJSONDirectionResponse = await FnHttpRequest(strGoogleDirectionUrl);
 
-					currentLng += (sum & 1) == 1 ? ~(sum >> 1) : (sum >> 1);
-					
-					var lat = Convert.ToDouble(currentLat) / 100000.0;
-					var lng = Convert.ToDouble(currentLng) / 100000.0;
-					LatLng p = new LatLng(lat, lng);
-					poly.Add(p);
-				} 
+				FnUpdateCameraPosition(pointCoordinates);
+				FnSetDirectionQuery(strJSONDirectionResponse);
 			}
-			catch 
+			catch (Exception ex)
 			{
-				//RunOnUiThread ( () =>
-				//	Toast.MakeText ( this , Constants.strPleaseWait , ToastLength.Short ).Show () ); 
+				Toast.MakeText(ApplicationContext, ex.Message, ToastLength.Long)
+					?.Show();
 			}
+		}
+
+		private void RecenterButtonClick(object sender, EventArgs e)
+		{
+			var camera = CameraUpdateFactory.NewLatLngZoom(_mapCenterLatLng, 13.2F);
+			_eMap.MoveCamera(camera);
+		}
+
+		private void RouteButtonClick(object sender, EventArgs e)
+		{
+			var destinationPointName = _destinationPointEditText.Text;
+			BuildPath(destinationPointName);
+		}
+
+		public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
+			Android.Content.PM.Permission[] grantResults)
+		{
+			Xamarin.Essentials.Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+
+			base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+		}
+
+		private void FnSetDirectionQuery(string strJSONDirectionResponse)
+		{
+			var objRoutes = JsonConvert.DeserializeObject<GoogleDirectionClass>(strJSONDirectionResponse);
+
+			if (objRoutes.routes.Count <= 0) return;
+			var encodedPoints = objRoutes.routes[0].overview_polyline.points;
+
+			var lstDecodedPoints = FnDecodePolylinePoints(encodedPoints);
+			//convert list of location point to array of LatLng type
+			var latLngPoints = new LatLng[lstDecodedPoints.Count];
+			var index = 0;
+			foreach (var loc in lstDecodedPoints)
+			{
+				latLngPoints[index++] = loc;
+			}
+
+			var polylineOptions = new PolylineOptions();
+			polylineOptions.InvokeColor(Android.Graphics.Color.Green);
+			polylineOptions.Geodesic(true);
+			polylineOptions.Add(latLngPoints);
+			RunOnUiThread(() =>
+				_eMap.AddPolyline(polylineOptions));
+		}
+
+		private static List<LatLng> FnDecodePolylinePoints(string encodedPoints)
+		{
+			if (string.IsNullOrEmpty(encodedPoints))
+				return null;
+			var poly = new List<LatLng>();
+			var polylineCharArray = encodedPoints.ToCharArray();
+			var index = 0;
+
+			var currentLat = 0;
+			var currentLng = 0;
+
+
+			while (index < polylineCharArray.Length)
+			{
+				// calculate next latitude
+				var sum = 0;
+				var shifter = 0;
+				int next5bits;
+				do
+				{
+					next5bits = (int) polylineCharArray[index++] - 63;
+					sum |= (next5bits & 31) << shifter;
+					shifter += 5;
+				} while (next5bits >= 32 && index < polylineCharArray.Length);
+
+				if (index >= polylineCharArray.Length)
+					break;
+
+				currentLat += (sum & 1) == 1 ? ~(sum >> 1) : (sum >> 1);
+
+				//calculate next longitude
+				sum = 0;
+				shifter = 0;
+				do
+				{
+					next5bits = (int) polylineCharArray[index++] - 63;
+					sum |= (next5bits & 31) << shifter;
+					shifter += 5;
+				} while (next5bits >= 32 && index < polylineCharArray.Length);
+
+				if (index >= polylineCharArray.Length && next5bits >= 32)
+					break;
+
+				currentLng += (sum & 1) == 1 ? ~(sum >> 1) : (sum >> 1);
+
+				var lat = Convert.ToDouble(currentLat) / 100000.0;
+				var lng = Convert.ToDouble(currentLng) / 100000.0;
+				LatLng p = new LatLng(lat, lng);
+				poly.Add(p);
+			}
+
 			return poly;
 		}
 
-		
-		
-		void FnUpdateCameraPosition(LatLng pos)
+		private void FnUpdateCameraPosition(LatLng pos)
 		{
 			try
 			{
-				CameraPosition.Builder builder = CameraPosition.InvokeBuilder(); 
+				var builder = CameraPosition.InvokeBuilder();
 				builder.Target(pos);
 				builder.Zoom(12);
 				builder.Bearing(45);
 				builder.Tilt(10);
-				CameraPosition cameraPosition = builder.Build(); 
-				CameraUpdate cameraUpdate = CameraUpdateFactory.NewCameraPosition(cameraPosition); 
-				eMap.AnimateCamera(cameraUpdate);
+				CameraPosition cameraPosition = builder.Build();
+				CameraUpdate cameraUpdate = CameraUpdateFactory.NewCameraPosition(cameraPosition);
+				_eMap.AnimateCamera(cameraUpdate);
 			}
-			catch( Exception e)
+			catch (Exception e)
 			{
-				Console.WriteLine ( e.Message );
-
+				Console.WriteLine(e.Message);
 			}
 		}
-
-		WebClient webclient;
-		async Task<string> FnHttpRequest(string strUri)
-		{ 
-			webclient = new WebClient ();
+		
+		private async Task<string> FnHttpRequest(string strUri)
+		{
+			var webclient = new WebClient();
 			string strResultData;
 			try
 			{
-				strResultData= await webclient.DownloadStringTaskAsync (new Uri(strUri));
+				strResultData = await webclient.DownloadStringTaskAsync(new Uri(strUri));
 				Console.WriteLine(strResultData);
 			}
 			catch
 			{
-				//strResultData = Constants.strException;
 				strResultData = "Exeption!";
 			}
 			finally
 			{
-				if ( webclient!=null )
-				{
-					webclient.Dispose ();
-					webclient = null; 
-				}
+				webclient.Dispose();
 			}
 
 			return strResultData;
 		}
-    }
-
+	}
 }

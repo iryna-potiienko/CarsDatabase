@@ -20,6 +20,12 @@ namespace CarsDatabase
         ListView lstViewData;
         List<Car> listSource = new List<Car>();
         Database db;
+        private EditText editBrand;
+        private EditText editBodyType;
+        private EditText editColor;
+        private EditText editVEngine;
+        private EditText editPrice;
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -44,16 +50,17 @@ namespace CarsDatabase
             db.createDatabase();
             //db.removeTable
             lstViewData = FindViewById<ListView>(Resource.Id.listView);
-            var editBrand = FindViewById<EditText>(Resource.Id.edtName);
-            var editBodyType = FindViewById<EditText>(Resource.Id.edtDepart);
-            var editColor = FindViewById<EditText>(Resource.Id.edtEmail);
-            var editVEngine = FindViewById<EditText>(Resource.Id.VEngine);
-            var editPrice = FindViewById<EditText>(Resource.Id.Price);
+            editBrand = FindViewById<EditText>(Resource.Id.edtName);
+            editBodyType = FindViewById<EditText>(Resource.Id.edtDepart);
+            editColor = FindViewById<EditText>(Resource.Id.edtEmail);
+            editVEngine = FindViewById<EditText>(Resource.Id.VEngine);
+            editPrice = FindViewById<EditText>(Resource.Id.Price);
 
             var btnAdd = FindViewById<Button>(Resource.Id.btnAdd);
             var btnEdit = FindViewById<Button>(Resource.Id.btnEdit);
             var btnRemove = FindViewById<Button>(Resource.Id.btnRemove);
             var btnAverage = FindViewById<Button>(Resource.Id.btnAverage);
+            var btnClear = FindViewById<Button>(Resource.Id.btnClear);
             Button btnQuary = FindViewById<Button>(Resource.Id.btnQuary);
             Button btnAllCars = FindViewById<Button>(Resource.Id.btnAllCars);
 
@@ -63,44 +70,48 @@ namespace CarsDatabase
             //Event  
             btnAdd.Click += delegate
             {
-                Car car = new Car()
+                try
                 {
-                    Brand = editBrand.Text,
-                    BodyType = editBodyType.Text,
-                    Color = editColor.Text,
-                    VEngine=Convert.ToDouble(editVEngine.Text),
-                    Price = Convert.ToDouble(editPrice.Text)
-                };
-                db.insertIntoTable(car);
-                LoadData();
+                    Car car = new Car()
+                    {
+                        Brand = editBrand.Text,
+                        BodyType = editBodyType.Text,
+                        Color = editColor.Text,
+                        VEngine = Convert.ToDouble(editVEngine.Text),
+                        Price = Convert.ToDouble(editPrice.Text)
+                    };
+                    db.insertIntoTable(car);
+                    ClearAll();
+                    LoadData();
+                }catch{}
             };
             btnEdit.Click += delegate
             {
-                Car car = new Car()
+                if (editBrand.Tag != null)
                 {
-                    Id = int.Parse(editBrand.Tag.ToString()),
-                    Brand = editBrand.Text,
-                    BodyType = editBodyType.Text,
-                    Color = editColor.Text,
-                    VEngine = Convert.ToDouble(editVEngine.Text),
-                    Price = Convert.ToDouble(editPrice.Text)
-                };
-                db.updateTable(car);
-                LoadData();
+                    Car car = new Car()
+                    {
+                        Id = int.Parse(editBrand.Tag.ToString()),
+                        Brand = editBrand.Text,
+                        BodyType = editBodyType.Text,
+                        Color = editColor.Text,
+                        VEngine = Convert.ToDouble(editVEngine.Text),
+                        Price = Convert.ToDouble(editPrice.Text)
+                    };
+                    db.updateTable(car);
+                    ClearAll();
+                    LoadData();
+                }
             };
             btnRemove.Click += delegate
             {
-                Car car = new Car()
+                if (editBrand.Tag != null)
                 {
-                    Id = int.Parse(editBrand.Tag.ToString()),
-                    Brand = editBrand.Text,
-                    BodyType = editBodyType.Text,
-                    Color = editColor.Text,
-                    VEngine = Convert.ToDouble(editVEngine.Text),
-                    Price = Convert.ToDouble(editPrice.Text)
-                };
-                db.removeTable(car);
-                LoadData();
+                    var id = int.Parse(editBrand.Tag.ToString());
+                    db.removeTable(id);
+                    ClearAll();
+                    LoadData();
+                }
             };
             lstViewData.ItemClick += (s, e) =>
             {
@@ -128,6 +139,10 @@ namespace CarsDatabase
             btnAllCars.Click += delegate
             {
                 LoadData();
+            };
+            btnClear.Click += delegate
+            {
+                ClearAll();
             };
         }
 
@@ -202,6 +217,15 @@ namespace CarsDatabase
             Xamarin.Essentials.Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
 
             base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+
+        private void ClearAll()
+        {
+            editBrand.Text = "";
+            editColor.Text = "";
+            editPrice.Text = "";
+            editBodyType.Text = "";
+            editVEngine.Text = "";
         }
     }
 }

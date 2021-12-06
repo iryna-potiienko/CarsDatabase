@@ -26,6 +26,11 @@
             android:text="All cars"
             android:foregroundGravity="right"
             android:gravity="center_vertical|right" />
+        <Button
+                android:id="@+id/btnClear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Clear"/>
         </LinearLayout>
     
     <EditText  
